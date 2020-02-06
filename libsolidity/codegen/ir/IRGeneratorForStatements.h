@@ -22,6 +22,7 @@
 
 #include <libsolidity/ast/ASTVisitor.h>
 #include <libsolidity/codegen/ir/IRLValue.h>
+#include <libsolidity/codegen/ir/IRVariable.h>
 
 namespace solidity::frontend
 {
@@ -75,12 +76,18 @@ private:
 
 	std::string fetchFreeMem() const;
 
+	IRVariable convert(IRVariable const& _variable, Type const& _to);
+
 	/// @returns a Yul expression representing the current value of @a _expression,
 	/// converted to type @a _to if it does not yet have that type.
 	std::string expressionAsType(Expression const& _expression, Type const& _to);
-	std::ostream& defineExpression(Expression const& _expression);
-	/// Defines only one of many variables corresponding to an expression.
-	std::ostream& defineExpressionPart(Expression const& _expression, std::string const& _part);
+
+	std::ostream& define(IRVariable const& _var);
+	void define(IRVariable const& _var, IRVariable const& _value) { declareAssign(_var, _value, true); }
+	void assign(IRVariable const& _var, IRVariable const& _value) { declareAssign(_var, _value, false); }
+	void declare(IRVariable const& _var);
+
+	void declareAssign(IRVariable const& _var, IRVariable const& _value, bool _define);
 
 	void appendAndOrOperatorCode(BinaryOperation const& _binOp);
 	void appendSimpleUnaryOperation(UnaryOperation const& _operation, Expression const& _expr);
@@ -93,7 +100,10 @@ private:
 		std::string const& _right
 	);
 
-	void setLValue(Expression const& _expression, std::unique_ptr<IRLValue> _lvalue);
+	void assignCurrentLValue(IRVariable const& _value);
+	IRVariable fetchCurrentLValue();
+
+	void setLValue(Expression const& _expression, IRLValue _lvalue);
 	void generateLoop(
 		Statement const& _body,
 		Expression const* _conditionExpression,
@@ -107,7 +117,7 @@ private:
 	std::ostringstream m_code;
 	IRGenerationContext& m_context;
 	YulUtilFunctions& m_utils;
-	std::unique_ptr<IRLValue> m_currentLValue;
+	std::optional<IRLValue> m_currentLValue;
 };
 
 }
